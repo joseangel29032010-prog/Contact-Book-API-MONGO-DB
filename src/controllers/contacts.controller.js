@@ -1,212 +1,192 @@
 
-const { Op } = require('sequelize');
-const { Contact, Category } = require('../models');
-const AppError = require('../utils/AppError');
+const Contact = require('../models/Contact');
 
-async function findContact(id, userId) {
-  const contact = await Contact.findOne({
-    where: { id, userId },
-    include: [{ model: Category, as: 'category' }],
-  });
+// GET: Obtener todos los contactos
 
-  return contact;
-}
+const getAllContacts = async (req, res) => {
+    try {
+        const filter = {};
 
-function formatContact(contact) {
-  const data = contact.get({ plain: true });
-  data.category = data.category.name;
-  return data;
-}
+        // Filtrar por categoría si se proporciona
+        if (req.query.category) {
+            filter.category = req.query.category;
+        }
 
-async function getAllContacts(req, res, next) {
-  try {
-    const contacts = await Contact.findAll({
-      where: { userId: req.user.id },
-      include: [{ model: Category, as: 'category' }],
-    });
+        // Filtrar por favoritos si se proporciona
+        if (req.query.favorite !== undefined) {
+            filter.favorite = req.query.favorite === 'true';
+        }
 
-    res.status(200).json({
-      contacts: contacts.map(formatContact),
-    });
-  } catch (error) {
-    next(error);
-  }
-}
+        const contacts = await Contact.find(filter)
+            .sort({ createdAt: -1 });
 
-async function getContactById(req, res, next) {
-  try {
-    const contact = await findContact(req.params.id, req.user.id);
-
-    if (!contact) {
-      throw new AppError('Contacto no encontrado', 404);
+        res.status(200).json({
+            total: contacts.length,
+            contacts
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Error al obtener contactos',
+            error: error.message
+        });
     }
+};
 
-    res.status(200).json({ contact: formatContact(contact) });
-  } catch (error) {
-    next(error);
-  }
-}
 
-async function createContact(req, res, next) {
-  try {
-    const { name, phone, email, favorite } = req.body;
-    const categoryName = req.body.category || 'other';
+// GET: Obtener contacto por ID
+const getContactById = async (req, res) => {
+    try {
+        const contact = await Contact.findById(req.params.id);
 
-    const duplicate = await Contact.findOne({
-      where: { phone, userId: req.user.id },
-    });
+        if (!contact) {
+            return res.status(404).json({
+                message: 'Contacto no encontrado'
+            });
+        }
 
-    if (duplicate) {
-      throw new AppError('Este teléfono ya está registrado', 409);
+        res.status(200).json(contact);
+    } catch (error) {
+        res.status(400).json({
+            message: 'ID inválido o error al buscar contacto',
+            error: error.message
+        });
     }
+};
 
-    const category = await Category.findOne({
-      where: { name: categoryName },
-    });
+// POST: Crear contacto
+const createContact = async (req, res) => {
+    try {
+        const contact = await Contact.create(req.body);
 
-    const contact = await Contact.create({
-      name,
-      phone,
-      email,
-      favorite: favorite ?? false,
-      userId: req.user.id,
-      categoryId: category.id,
-    });
-
-    const savedContact = await findContact(contact.id, req.user.id);
-
-    res.status(201).json({
-      message: 'Contacto creado correctamente',
-      contact: formatContact(savedContact),
-    });
-  } catch (error) {
-    if (error.name === 'SequelizeUniqueConstraintError') {
-      return next(new AppError('Este teléfono ya está registrado', 409));
+        res.status(201).json({
+            message: 'Contacto creado correctamente',
+            contact
+        });
+    } catch (error) {
+        res.status(400).json({
+            message: 'Error al crear contacto',
+            error: error.message
+        });
     }
-    next(error);
-  }
-}
+};
 
-async function updateContact(req, res, next) {
-  try {
-    const contact = await findContact(req.params.id, req.user.id);
+// PUT: Actualizar contacto
+const updateContact = async (req, res) => {
+    try {
+        const contact = await Contact.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
 
-    if (!contact) {
-      throw new AppError('Contacto no encontrado', 404);
+        if (!contact) {
+            return res.status(404).json({
+                message: 'Contacto no encontrado'
+            });
+        }
+
+        res.status(200).json({
+            message: 'Contacto actualizado correctamente',
+            contact
+        });
+    } catch (error) {
+        res.status(400).json({
+            message: 'Error al actualizar contacto',
+            error: error.message
+        });
     }
+};
 
-    const { name, phone, email, favorite } = req.body;
-    const categoryName = req.body.category ?? 'other';
+// PATCH: Cambiar favorito
+const toggleFavorite = async (req, res) => {
+    try {
+        const contact = await Contact.findById(req.params.id);
 
-    const duplicate = await Contact.findOne({
-      where: {
-        phone,
-        userId: req.user.id,
-        id: { [Op.ne]: contact.id },
-      },
-    });
+        if (!contact) {
+            return res.status(404).json({
+                message: 'Contacto no encontrado'
+            });
+        }
 
-    if (duplicate) {
-      throw new AppError('Este teléfono ya está registrado', 409);
+        contact.favorite = !contact.favorite;
+        await contact.save();
+
+        res.status(200).json({
+            message: 'Favorito actualizado',
+            contact
+        });
+    } catch (error) {
+        res.status(400).json({
+            message: 'Error al cambiar favorito',
+            error: error.message
+        });
     }
+};
 
-    const category = await Category.findOne({
-      where: { name: categoryName },
-    });
+// DELETE: Eliminar contacto
+const deleteContact = async (req, res) => {
+    try {
+        const contact = await Contact.findByIdAndDelete(req.params.id);
 
-    await contact.update({
-      name,
-      phone,
-      email,
-      favorite: favorite ?? false,
-      categoryId: category.id,
-    });
+        if (!contact) {
+            return res.status(404).json({
+                message: 'Contacto no encontrado'
+            });
+        }
 
-    const updatedContact = await findContact(contact.id, req.user.id);
-
-    res.status(200).json({
-      message: 'Contacto actualizado correctamente',
-      contact: formatContact(updatedContact),
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-async function toggleFavorite(req, res, next) {
-  try {
-    const contact = await findContact(req.params.id, req.user.id);
-
-    if (!contact) {
-      throw new AppError('Contacto no encontrado', 404);
+        res.status(200).json({
+            message: 'Contacto eliminado correctamente'
+        });
+    } catch (error) {
+        res.status(400).json({
+            message: 'Error al eliminar contacto',
+            error: error.message
+        });
     }
+};
 
-    await contact.update({ favorite: !contact.favorite });
+// GET: Estadísticas con agregaciones
+const getContactStats = async (req, res) => {
+    try {
+        const contactsByCategory = await Contact.aggregate([
+            {
+                $group: {
+                    _id: '$category',
+                    total: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { total: -1 }
+            }
+        ]);
 
-    const updatedContact = await findContact(contact.id, req.user.id);
+        const favoritesStats = await Contact.aggregate([
+            {
+                $group: {
+                    _id: '$favorite',
+                    total: { $sum: 1 }
+                }
+            }
+        ]);
 
-    res.status(200).json({
-      message: 'Favorito actualizado',
-      contact: formatContact(updatedContact),
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-async function deleteContact(req, res, next) {
-  try {
-    const contact = await findContact(req.params.id, req.user.id);
-
-    if (!contact) {
-      throw new AppError('Contacto no encontrado', 404);
+        res.status(200).json({
+            contactsByCategory,
+            favoritesStats
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Error al obtener estadísticas',
+            error: error.message
+        });
     }
-
-    await contact.destroy();
-
-    res.status(200).json({
-      message: 'Contacto eliminado correctamente',
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
-async function getContactStats(req, res, next) {
-  try {
-    const contacts = await Contact.findAll({
-      where: { userId: req.user.id },
-      include: [{ model: Category, as: 'category' }],
-    });
-
-    const byCategory = {
-      family: 0,
-      friends: 0,
-      work: 0,
-      other: 0,
-    };
-
-    contacts.forEach((contact) => {
-      byCategory[contact.category.name]++;
-    });
-
-    res.status(200).json({
-      clientId: req.clientId,
-      total: contacts.length,
-      favorites: contacts.filter((contact) => contact.favorite).length,
-      byCategory,
-    });
-  } catch (error) {
-    next(error);
-  }
-}
+};
 
 module.exports = {
-  getAllContacts,
-  getContactById,
-  createContact,
-  updateContact,
-  toggleFavorite,
-  deleteContact,
-  getContactStats,
+    getAllContacts,
+    getContactById,
+    createContact,
+    updateContact,
+    toggleFavorite,
+    deleteContact,
+    getContactStats
 };

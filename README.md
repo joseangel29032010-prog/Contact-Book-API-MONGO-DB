@@ -1,101 +1,21 @@
 # Contact Book API
 
-Contact Book es una API REST que permite gestionar contactos personales de forma organizada. Cada usuario puede tener su propia lista de contactos, clasificarlos por categorías y marcar sus favoritos.
+Este proyecto consiste en una API REST que utiliza MongoDB como base de datos para almacenar y administrar contactos. La información se guarda en una colección, donde cada contacto tiene datos como nombre, teléfono, correo electrónico, categoría y estado de favorito.
 
-El proyecto cuenta con un sistema de autenticación y diferentes niveles de permisos para controlar las acciones que puede realizar cada usuario.
+Se implementaron las operaciones CRUD para crear, consultar, actualizar y eliminar documentos de la base de datos. También se pueden realizar búsquedas por categoría y por estado de favorito.
 
-Fue desarrollado como proyecto final del curso **Desarrollo Backend con Node.js**, aplicando los conocimientos adquiridos durante el curso.
+Para trabajar con los datos se utilizaron agregaciones de MongoDB. Una permite agrupar y contar los contactos según su categoría, mientras que la otra permite conocer la cantidad de contactos favoritos y no favoritos.
 
-## Funcionalidades
+Además, se creó un índice en el campo `category` para mejorar el rendimiento de las consultas que buscan contactos por categoría.
 
-- Registro de usuarios e inicio de sesión.
-- Autenticación mediante JWT.
-- Contraseñas protegidas con bcrypt.
-- Creación, consulta, edición y eliminación de contactos.
-- Organización de contactos por categorías.
-- Gestión de contactos favoritos.
-- Estadísticas de contactos.
-- Administración de usuarios y modificación de roles.
-- Protección de rutas según los permisos del usuario.
-- Validación de datos y manejo de errores.
-- Conexión con PostgreSQL.
+También se añadieron validaciones mediante Mongoose para controlar los datos que se guardan en la base de datos y evitar información incorrecta.# Contact Book API
 
-## Instalación
+Este proyecto consiste en una API REST que utiliza MongoDB como base de datos para almacenar y administrar contactos. La información se guarda en una colección, donde cada contacto tiene datos como nombre, teléfono, correo electrónico, categoría y estado de favorito.
 
-Clona el repositorio:
+Se implementaron las operaciones CRUD para crear, consultar, actualizar y eliminar documentos de la base de datos. También se pueden realizar búsquedas por categoría y por estado de favorito.
 
-```bash
-git clone https://github.com/joseangel29032010-prog/Proyecto-Final-Contact-Book-Jose-Angel-Jimenez.git
-```
+Para trabajar con los datos se utilizaron agregaciones de MongoDB. Una permite agrupar y contar los contactos según su categoría, mientras que la otra permite conocer la cantidad de contactos favoritos y no favoritos.
 
-Entra en la carpeta del proyecto:
+Además, se creó un índice en el campo `category` para mejorar el rendimiento de las consultas que buscan contactos por categoría.
 
-```bash
-cd Proyecto-Final-Contact-Book-Jose-Angel-Jimenez
-```
-
-Instala las dependencias:
-
-```bash
-npm install
-```
-
-## Configuración
-
-Crea un archivo `.env` en la raíz del proyecto, tomando como referencia el archivo `.env.example`.
-
-Configura las siguientes variables:
-
-```env
-PORT=3000
-JWT_SECRET=tu_secreto_jwt
-JWT_EXPIRES_IN=1h
-
-ADMIN_EMAIL=admin@contactbook.com
-ADMIN_PASSWORD=tu_contrasena
-
-DB_HOST=127.0.0.1
-DB_PORT=5433
-DB_NAME=contactbook
-DB_USER=postgres
-DB_PASSWORD=tu_contrasena
-```
-
-Utiliza tus propias credenciales y no compartas el archivo `.env`.
-
-## Ejecutar el proyecto
-
-Inicia PostgreSQL mediante Docker:
-
-```bash
-docker compose up -d
-```
-
-Inicia el servidor en modo desarrollo:
-
-```bash
-npm run dev
-```
-
-También puedes iniciarlo normalmente con:
-
-```bash
-npm start
-```
-
-La API estará disponible en:
-
-`http://localhost:3000`
-
-## Principales rutas
-
-**Autenticación**
-- `POST /auth/register` — Registrar un usuario.
-- `POST /auth/login` — Iniciar sesión.
-- `GET /auth/me` — Consultar el usuario autenticado.
-
-**Contactos**
-- `GET /contacts` — Obtener los contactos.
-- `GET /contacts/:id` — Consultar un contacto.
-- `POST /contacts` — Crear un contacto.
-- `PUT /contacts
+También se añadieron validaciones mediante Mongoose para controlar los datos que se guardan en la base de datos y evitar información incorrecta.
